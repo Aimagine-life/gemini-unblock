@@ -174,13 +174,33 @@ function bindSettings() {
     });
   }
 
-  const fields = [
-    ['#cfg-host', 'host', (v) => v.trim()],
+  // Auto-parse proxy URL when pasted/typed into host field.
+  // Supports: socks5://user:pass@host:port, http://host:port, host:port, etc.
+  const hostEl = $('#cfg-host');
+  hostEl.addEventListener('blur', async () => {
+    ensureProxyObject();
+    const raw = hostEl.value.trim();
+    const parsed = tryParseProxyUrl(raw);
+    if (parsed) {
+      state.proxy.host = parsed.host;
+      if (parsed.port) state.proxy.port = parsed.port;
+      if (parsed.scheme) state.proxy.scheme = parsed.scheme;
+      if (parsed.user) state.proxy.user = parsed.user;
+      if (parsed.pass !== undefined) state.proxy.pass = parsed.pass;
+      await persist();
+      renderSettings();
+    } else {
+      state.proxy.host = raw;
+      await persist();
+    }
+  });
+
+  const otherFields = [
     ['#cfg-port', 'port', (v) => parseInt(v, 10) || 0],
     ['#cfg-user', 'user', (v) => v],
     ['#cfg-pass', 'pass', (v) => v],
   ];
-  for (const [sel, key, parse] of fields) {
+  for (const [sel, key, parse] of otherFields) {
     const el = $(sel);
     el.addEventListener('blur', async () => {
       ensureProxyObject();
@@ -205,6 +225,65 @@ function renderSettings() {
   }
 
   $('#test-result').hidden = true;
+}
+
+/**
+ * Try to parse a proxy URL like socks5://user:pass@host:port.
+ * Returns { scheme, host, port, user, pass } or null if it's just a plain hostname.
+ */
+function tryParseProxyUrl(input) {
+  const SCHEMES = { http: 'http', https: 'https', socks5: 'socks5', socks4: 'socks4', socks: 'socks5' };
+
+  // Quick check: does it look like a URL (has :// or scheme: prefix)?
+  const hasScheme = /^[a-z][a-z0-9]*:\/\//i.test(input);
+  const hasPort = /:(\d+)\s*$/.test(input);
+
+  if (!hasScheme && !hasPort) return null;
+
+  let scheme = null;
+  let rest = input;
+
+  // Extract scheme
+  const schemeMatch = input.match(/^([a-z][a-z0-9]*):\/\//i);
+  if (schemeMatch) {
+    scheme = SCHEMES[schemeMatch[1].toLowerCase()] || null;
+    rest = input.slice(schemeMatch[0].length);
+  }
+
+  // Extract userinfo
+  let user = null;
+  let pass = undefined;
+  const atIdx = rest.indexOf('@');
+  if (atIdx !== -1) {
+    const userinfo = rest.slice(0, atIdx);
+    rest = rest.slice(atIdx + 1);
+    const colonIdx = userinfo.indexOf(':');
+    if (colonIdx !== -1) {
+      user = decodeURIComponent(userinfo.slice(0, colonIdx));
+      pass = decodeURIComponent(userinfo.slice(colonIdx + 1));
+    } else {
+      user = decodeURIComponent(userinfo);
+    }
+  }
+
+  // Extract host:port (strip trailing path/query)
+  rest = rest.split(/[/?#]/)[0];
+  let host = rest;
+  let port = null;
+  const portMatch = rest.match(/:(\d+)$/);
+  if (portMatch) {
+    port = parseInt(portMatch[1], 10);
+    host = rest.slice(0, -portMatch[0].length);
+  }
+
+  if (!host) return null;
+
+  const result = { host };
+  if (scheme) result.scheme = scheme;
+  if (port) result.port = port;
+  if (user) result.user = user;
+  if (pass !== undefined) result.pass = pass;
+  return result;
 }
 
 function ensureProxyObject() {
