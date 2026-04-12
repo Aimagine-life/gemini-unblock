@@ -28,16 +28,18 @@ export async function applyProxy(state) {
  * Reads credentials from storage at fire time so updates are picked up live.
  */
 export function registerAuthListener() {
+  // asyncBlocking requires explicit callback invocation — returning from async
+  // function is NOT reliable in MV3 service workers.
   chrome.webRequest.onAuthRequired.addListener(
-    async (details) => {
-      // Only handle proxy challenges, not server-side auth.
-      if (!details.isProxy) return {};
-      const state = await loadState();
-      const proxy = state?.proxy;
-      if (!proxy || !proxy.user) return {};
-      return {
-        authCredentials: { username: proxy.user, password: proxy.pass || '' },
-      };
+    (details, callback) => {
+      if (!details.isProxy) { callback({}); return; }
+      loadState()
+        .then((state) => {
+          const proxy = state?.proxy;
+          if (!proxy?.user) { callback({}); return; }
+          callback({ authCredentials: { username: proxy.user, password: proxy.pass || '' } });
+        })
+        .catch(() => callback({}));
     },
     { urls: ['<all_urls>'] },
     ['asyncBlocking']
