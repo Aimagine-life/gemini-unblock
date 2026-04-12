@@ -127,14 +127,20 @@ function bindSettings() {
     pill.addEventListener('click', async () => {
       const scheme = pill.dataset.scheme;
       ensureProxyObject();
-      state.proxy.scheme = scheme;
-      await persist();
-      renderSettings();
+      if (scheme === 'auto') {
+        state.proxy.scheme = 'auto';
+        await persist();
+        renderSettings();
+        await autoDetectScheme();
+      } else {
+        state.proxy.scheme = scheme;
+        await persist();
+        renderSettings();
+      }
     });
   }
 
   // Auto-parse proxy URL when pasted/typed into host field.
-  // Supports: socks5://user:pass@host:port, http://host:port, host:port, etc.
   const hostEl = $('#cfg-host');
   hostEl.addEventListener('blur', async () => {
     ensureProxyObject();
@@ -146,8 +152,15 @@ function bindSettings() {
       if (parsed.scheme) state.proxy.scheme = parsed.scheme;
       if (parsed.user) state.proxy.user = parsed.user;
       if (parsed.pass !== undefined) state.proxy.pass = parsed.pass;
+      // If URL had no explicit scheme (provider format), auto-detect.
+      if (!parsed.scheme) {
+        state.proxy.scheme = 'auto';
+      }
       await persist();
       renderSettings();
+      if (state.proxy.scheme === 'auto' && state.proxy.host && state.proxy.port) {
+        await autoDetectScheme();
+      }
     } else {
       state.proxy.host = raw;
       await persist();
@@ -203,18 +216,17 @@ function tryParseProxyUrl(input) {
   if (!hasScheme) {
     const parts = input.trim().split(':');
     if (parts.length === 4 && /^\d+$/.test(parts[1])) {
-      // Provider format: no scheme → default HTTP (most provider proxies are HTTP)
+      // Provider format: no scheme → auto-detect will determine it
       return {
         host: parts[0],
         port: parseInt(parts[1], 10),
-        scheme: 'http',
         user: parts[2],
         pass: parts[3],
       };
     }
-    // host:port only → default HTTP
+    // host:port only
     if (parts.length === 2 && /^\d+$/.test(parts[1])) {
-      return { host: parts[0], port: parseInt(parts[1], 10), scheme: 'http' };
+      return { host: parts[0], port: parseInt(parts[1], 10) };
     }
   }
 
@@ -266,7 +278,32 @@ function tryParseProxyUrl(input) {
 
 function ensureProxyObject() {
   if (!state.proxy) {
-    state.proxy = { host: '', port: 0, scheme: 'http', user: '', pass: '' };
+    state.proxy = { host: '', port: 0, scheme: 'auto', user: '', pass: '' };
+  }
+}
+
+async function autoDetectScheme() {
+  const result = $('#test-result');
+  result.hidden = false;
+  result.className = 'result-block';
+  result.textContent = 'Detecting protocol...';
+
+  const res = await chrome.runtime.sendMessage({
+    type: 'DETECT_SCHEME',
+    host: state.proxy.host,
+    port: state.proxy.port,
+    user: state.proxy.user || '',
+    pass: state.proxy.pass || '',
+  });
+
+  if (res.ok) {
+    state = await loadState();
+    result.className = 'result-block ok';
+    result.textContent = `\u2713 Detected: ${res.scheme.toUpperCase()}`;
+    renderSettings();
+  } else {
+    result.className = 'result-block err';
+    result.textContent = `\u2717 ${res.error}`;
   }
 }
 

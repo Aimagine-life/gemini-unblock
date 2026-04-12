@@ -8,6 +8,7 @@ function pacDirective(scheme, host, port) {
     case 'https':  return `HTTPS ${host}:${port}`;
     case 'socks5': return `SOCKS5 ${host}:${port}; SOCKS ${host}:${port}`;
     case 'socks4': return `SOCKS ${host}:${port}`;
+    case 'auto':   return `PROXY ${host}:${port}`;
     default:       throw new Error(`Unknown proxy scheme: ${scheme}`);
   }
 }

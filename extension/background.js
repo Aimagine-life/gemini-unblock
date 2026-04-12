@@ -144,6 +144,10 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     runProxyTest('https://gemini.google.com/').then(sendResponse);
     return true;
   }
+  if (msg?.type === 'DETECT_SCHEME') {
+    detectScheme(msg.host, msg.port, msg.user, msg.pass).then(sendResponse);
+    return true;
+  }
   if (msg?.type === 'RKN_CHECK') {
     (async () => {
       const st = await loadState();
@@ -210,4 +214,44 @@ function buildAllThroughPac(proxy) {
     default:       directive = `PROXY ${host}:${port}`;
   }
   return `function FindProxyForURL(url, host) { return "${directive}"; }`;
+}
+
+// Auto-detect which protocol the proxy speaks by trying each one.
+async function detectScheme(host, port, user, pass) {
+  const candidates = ['http', 'socks5', 'socks4', 'https'];
+  const state = await loadState();
+
+  // Temporarily save credentials so onAuthRequired can supply them.
+  const origProxy = state.proxy;
+  state.proxy = { host, port, scheme: 'http', user: user || '', pass: pass || '' };
+  await saveState(state);
+
+  for (const scheme of candidates) {
+    const pac = buildAllThroughPac({ scheme, host, port });
+    try {
+      await chrome.proxy.settings.set({
+        value: { mode: 'pac_script', pacScript: { data: pac, mandatory: true } },
+        scope: 'regular',
+      });
+      const res = await fetch('https://ipinfo.io/json', {
+        cache: 'no-store',
+        signal: AbortSignal.timeout(5000),
+      });
+      if (res.ok) {
+        // Restore proxy and apply.
+        state.proxy.scheme = scheme;
+        await saveState(state);
+        await applyProxy(state);
+        return { ok: true, scheme };
+      }
+    } catch {
+      // This scheme didn't work, try next.
+    }
+  }
+
+  // None worked — restore original state.
+  state.proxy = origProxy;
+  await saveState(state);
+  await applyProxy(state);
+  return { ok: false, error: 'Could not detect protocol' };
 }
