@@ -137,3 +137,42 @@ test('parseEntry: throws on garbage', () => {
   assert.throws(() => parseEntry('not a domain'), ValidationError);
   assert.throws(() => parseEntry('localhost'), ValidationError);
 });
+
+test('parseEntry: rejects wildcard-of-exact (*.=...)', () => {
+  assert.throws(() => parseEntry('*.=foo.com'), ValidationError);
+});
+
+test('parseEntry: rejects exact-of-wildcard (=*...)', () => {
+  assert.throws(() => parseEntry('=*.foo.com'), ValidationError);
+});
+
+test('parseEntry: rejects double wildcard (*.*...)', () => {
+  assert.throws(() => parseEntry('*.*.foo.com'), ValidationError);
+});
+
+test('parseEntry: rejects bare *.', () => {
+  assert.throws(() => parseEntry('*.'), ValidationError);
+});
+
+test('parseEntry: rejects bare =', () => {
+  assert.throws(() => parseEntry('='), ValidationError);
+});
+
+test('normalizeDomain: rejects IPv6 literal in brackets', () => {
+  assert.throws(() => normalizeDomain('[::1]'), ValidationError);
+  assert.throws(() => normalizeDomain('http://[::1]/'), ValidationError);
+});
+
+test('parseEntry: rejects IPv6 literal', () => {
+  assert.throws(() => parseEntry('[::1]'), ValidationError);
+});
+
+test('validateNormalized: rejects IPv4 with leading zeros', () => {
+  assert.equal(validateNormalized('01.02.03.04'), false);
+  assert.equal(validateNormalized('192.168.001.001'), false);
+});
+
+test('validateNormalized: accepts IPv4 0.0.0.0 and 255.255.255.255', () => {
+  assert.equal(validateNormalized('0.0.0.0'), true);
+  assert.equal(validateNormalized('255.255.255.255'), true);
+});

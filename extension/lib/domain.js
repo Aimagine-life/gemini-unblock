@@ -47,6 +47,13 @@ export function normalizeDomain(input) {
     throw new ValidationError(`not a valid hostname: ${input}`);
   }
 
+  // The URL parser accepts IPv6 literals and returns them in bracket form
+  // (e.g. "[::1]"). We don't support IPv6 in v1 — reject explicitly so the
+  // caller doesn't see a bracketed string sneak through as "normalized".
+  if (s.startsWith('[')) {
+    throw new ValidationError('IPv6 literals are not supported');
+  }
+
   return s;
 }
 
@@ -55,6 +62,7 @@ const LABEL_RE = /^[a-z0-9]([a-z0-9-]*[a-z0-9])?$/;
 function isIPv4(s) {
   if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(s)) return false;
   return s.split('.').every((n) => {
+    if (n.length > 1 && n.startsWith('0')) return false;
     const v = Number(n);
     return v >= 0 && v <= 255;
   });
