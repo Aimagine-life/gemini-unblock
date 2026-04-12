@@ -24,6 +24,12 @@ export const PRESET_DEFINITIONS = {
     domains: ['notebooklm.google.com'],
     isAi: true,
   },
+  googleLabs: {
+    label: 'Google Labs',
+    icon: '🧪',
+    domains: ['labs.google', 'labs.google.com'],
+    isAi: true,
+  },
   chatgpt: {
     label: 'ChatGPT',
     icon: '◎',
@@ -63,6 +69,7 @@ export const PRESET_ORDER = [
   'gemini',
   'aiStudio',
   'notebookLM',
+  'googleLabs',
   'chatgpt',
   'claude',
   'perplexity',

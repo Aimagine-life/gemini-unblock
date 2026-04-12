@@ -12,6 +12,7 @@ export function getDefaultState() {
       aiStudio:   { enabled: true,  domains: ['aistudio.google.com', 'alkalimakersuite-pa.clients6.google.com'] },
       googleAuth: { enabled: true,  domains: ['accounts.google.com', 'ogs.google.com'] },
       notebookLM: { enabled: false, domains: ['notebooklm.google.com'] },
+      googleLabs: { enabled: false, domains: ['labs.google', 'labs.google.com'] },
       chatgpt:    { enabled: false, domains: ['chatgpt.com', 'chat.openai.com'] },
       claude:     { enabled: false, domains: ['claude.ai'] },
       perplexity: { enabled: false, domains: ['perplexity.ai', 'www.perplexity.ai'] },
