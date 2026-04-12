@@ -289,34 +289,48 @@ async function autoDetectScheme() {
   const autoPill = document.querySelector('.pill[data-scheme="auto"]');
   result.hidden = false;
   result.className = 'result-block detecting';
-  result.innerHTML = '\u25f7 Detecting protocol\u2026 trying HTTP \u2192 SOCKS5 \u2192 SOCKS4 \u2192 HTTPS';
+  result.innerHTML = '\u25f7 Detecting\u2026 HTTP';
   if (autoPill) autoPill.classList.add('detecting');
 
-  try {
-    const res = await chrome.runtime.sendMessage({
-      type: 'DETECT_SCHEME',
-      host: state.proxy.host,
-      port: state.proxy.port,
-      user: state.proxy.user || '',
-      pass: state.proxy.pass || '',
-    });
+  // Fire-and-forget to background. Popup watches storage for live updates.
+  chrome.runtime.sendMessage({
+    type: 'DETECT_SCHEME',
+    host: state.proxy.host,
+    port: state.proxy.port,
+    user: state.proxy.user || '',
+    pass: state.proxy.pass || '',
+  });
+}
 
-    if (res?.ok) {
-      state = await loadState();
+// Watch storage changes for detect progress + general state updates.
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== 'local' || !changes.state) return;
+  const newState = changes.state.newValue;
+  if (!newState) return;
+  state = newState;
+
+  const ds = state.detectStatus;
+  const result = $('#test-result');
+  const autoPill = document.querySelector('.pill[data-scheme="auto"]');
+
+  if (ds?.running) {
+    result.hidden = false;
+    result.className = 'result-block detecting';
+    result.innerHTML = `\u25f7 Detecting\u2026 ${ds.trying?.toUpperCase() || ''}`;
+    if (autoPill) autoPill.classList.add('detecting');
+  } else if (ds && !ds.running) {
+    if (autoPill) autoPill.classList.remove('detecting');
+    result.hidden = false;
+    if (ds.ok) {
       result.className = 'result-block ok';
-      result.textContent = `\u2713 Detected: ${res.scheme.toUpperCase()}`;
+      result.textContent = `\u2713 Detected: ${ds.scheme.toUpperCase()}`;
       renderSettings();
     } else {
       result.className = 'result-block err';
-      result.textContent = `\u2717 ${res?.error || 'Detection failed'}`;
+      result.textContent = `\u2717 ${ds.error || 'Detection failed'}`;
     }
-  } catch (err) {
-    result.className = 'result-block err';
-    result.textContent = `\u2717 ${err.message}`;
-  } finally {
-    if (autoPill) autoPill.classList.remove('detecting');
   }
-}
+});
 
 async function runTest(type) {
   const btnProxy = $('#test-proxy');

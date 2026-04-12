@@ -145,8 +145,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return true;
   }
   if (msg?.type === 'DETECT_SCHEME') {
-    detectScheme(msg.host, msg.port, msg.user, msg.pass).then(sendResponse);
-    return true;
+    // Fire-and-forget: run detection in background, write result to storage.
+    // Popup watches storage changes to update UI.
+    detectScheme(msg.host, msg.port, msg.user, msg.pass);
+    sendResponse({ started: true });
+    return false;
   }
   if (msg?.type === 'RKN_CHECK') {
     (async () => {
@@ -216,48 +219,49 @@ function buildAllThroughPac(proxy) {
   return `function FindProxyForURL(url, host) { return "${directive}"; }`;
 }
 
-// Auto-detect which protocol the proxy speaks by trying each one.
+// Auto-detect which protocol the proxy speaks.
+// Writes progress to state.detectStatus so the popup reacts via storage listener.
 async function detectScheme(host, port, user, pass) {
   const candidates = ['http', 'socks5', 'socks4', 'https'];
   const state = await loadState();
-
-  // Save credentials so onAuthRequired can supply them during probing.
   const origProxy = state.proxy;
-  state.proxy = { host, port: Number(port), scheme: 'http', user: user || '', pass: pass || '' };
-  await saveState(state);
 
-  // Brief pause to ensure storage is committed before auth listener reads it.
+  state.proxy = { host, port: Number(port), scheme: 'auto', user: user || '', pass: pass || '' };
+  state.detectStatus = { running: true, trying: candidates[0] };
+  await saveState(state);
   await new Promise((r) => setTimeout(r, 100));
 
   for (const scheme of candidates) {
-    const pac = buildAllThroughPac({ scheme, host, port: Number(port) });
+    // Write current attempt so popup can show it live.
+    state.detectStatus = { running: true, trying: scheme };
+    await saveState(state);
+
     try {
+      const pac = buildAllThroughPac({ scheme, host, port: Number(port) });
       await chrome.proxy.settings.set({
         value: { mode: 'pac_script', pacScript: { data: pac, mandatory: true } },
         scope: 'regular',
       });
-      // Small settle time for Chrome to apply the new PAC.
       await new Promise((r) => setTimeout(r, 50));
       const res = await fetch('https://ipinfo.io/json', {
         cache: 'no-store',
-        signal: AbortSignal.timeout(8000),
+        signal: AbortSignal.timeout(4000),
       });
       if (res.ok) {
         state.proxy.scheme = scheme;
+        state.detectStatus = { running: false, ok: true, scheme };
         await saveState(state);
         await applyProxy(state);
-        return { ok: true, scheme };
+        return;
       }
     } catch {
-      // Clear between attempts so Chrome doesn't cache the failed proxy.
       await chrome.proxy.settings.clear({ scope: 'regular' });
       await new Promise((r) => setTimeout(r, 100));
     }
   }
 
-  // None worked — restore original state.
   state.proxy = origProxy;
+  state.detectStatus = { running: false, ok: false, error: 'Could not detect protocol' };
   await saveState(state);
   if (origProxy) await applyProxy(state);
-  return { ok: false, error: 'Could not detect protocol — check host:port' };
 }
