@@ -244,16 +244,18 @@ function tryParseProxyUrl(input) {
   if (!hasScheme) {
     const parts = input.trim().split(':');
     if (parts.length === 4 && /^\d+$/.test(parts[1])) {
+      // Provider format: no scheme → default HTTP (most provider proxies are HTTP)
       return {
         host: parts[0],
         port: parseInt(parts[1], 10),
+        scheme: 'http',
         user: parts[2],
         pass: parts[3],
       };
     }
-    // host:port only
+    // host:port only → default HTTP
     if (parts.length === 2 && /^\d+$/.test(parts[1])) {
-      return { host: parts[0], port: parseInt(parts[1], 10) };
+      return { host: parts[0], port: parseInt(parts[1], 10), scheme: 'http' };
     }
   }
 
