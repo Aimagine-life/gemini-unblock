@@ -481,12 +481,22 @@ function isIPv4(s) {
  * Returns true if the (already normalized) hostname is structurally valid:
  * non-empty, ≤ 253 chars, contains a dot, every label conforms to DNS rules
  * (or it's an IPv4 literal).
+ *
+ * Special-case: if the input contains only digits and dots, it must parse
+ * as a valid IPv4 — otherwise it's almost certainly a typo'd IP attempt
+ * (e.g. "999.0.0.1", "1.2.3") and we reject it. Without this guard, those
+ * inputs would slip through as "valid hostnames" since digit-only labels
+ * are technically legal DNS labels, leaving the user with broken routing
+ * that silently never matches anything.
  */
 export function validateNormalized(domain) {
   if (!domain || typeof domain !== 'string') return false;
   if (domain.length > 253) return false;
 
-  if (isIPv4(domain)) return true;
+  // Looks IPv4-ish? Must be a real IPv4 then.
+  if (/^[\d.]+$/.test(domain)) {
+    return isIPv4(domain);
+  }
 
   if (!domain.includes('.')) return false;
 
