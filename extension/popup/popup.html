@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=360, initial-scale=1" />
+  <title>Gemini Unblock</title>
+  <link rel="stylesheet" href="popup.css" />
+</head>
+<body>
+  <div id="app">
+    <!-- Main screen -->
+    <section id="screen-main" class="screen" hidden>
+      <header class="header">
+        <div class="logo">🌐</div>
+        <div class="header-text">
+          <div class="title">Gemini Unblock</div>
+          <div class="status" id="status-line">—</div>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="master-toggle" />
+          <span class="slider"></span>
+        </label>
+        <button class="gear" id="open-settings" title="Settings">⚙</button>
+      </header>
+
+      <section class="block">
+        <div class="block-label">Routed services</div>
+        <div class="preset-grid" id="preset-grid"></div>
+      </section>
+
+      <section class="block">
+        <div class="block-label">Custom domains</div>
+        <div class="custom-list" id="custom-list"></div>
+        <form class="add-row" id="add-domain-form">
+          <input type="text" id="add-domain-input" placeholder="example.com or *.example.com" autocomplete="off" />
+          <button type="submit">+ Add</button>
+        </form>
+        <div class="error-text" id="add-domain-error" hidden></div>
+      </section>
+    </section>
+
+    <!-- Settings screen -->
+    <section id="screen-settings" class="screen" hidden>
+      <header class="header">
+        <button class="back" id="back-to-main" title="Back">←</button>
+        <div class="header-text">
+          <div class="title">Proxy settings</div>
+        </div>
+      </header>
+
+      <section class="block">
+        <div class="block-label">Protocol</div>
+        <div class="pill-group" id="scheme-pills">
+          <button data-scheme="http"   class="pill">HTTP</button>
+          <button data-scheme="https"  class="pill">HTTPS</button>
+          <button data-scheme="socks5" class="pill">SOCKS5</button>
+          <button data-scheme="socks4" class="pill">SOCKS4</button>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="row">
+          <div class="field grow">
+            <div class="block-label">Host</div>
+            <input type="text" id="cfg-host" autocomplete="off" />
+          </div>
+          <div class="field port">
+            <div class="block-label">Port</div>
+            <input type="text" id="cfg-port" autocomplete="off" inputmode="numeric" />
+          </div>
+        </div>
+      </section>
+
+      <section class="block">
+        <div class="block-label-row">
+          <span class="block-label">Authentication</span>
+          <span class="hint">optional</span>
+        </div>
+        <input type="text" id="cfg-user" placeholder="username" autocomplete="off" />
+        <input type="password" id="cfg-pass" placeholder="password" autocomplete="off" />
+      </section>
+
+      <section class="block">
+        <div class="row">
+          <button class="action" id="test-proxy">Test proxy</button>
+          <button class="action" id="test-gemini">Test Gemini</button>
+        </div>
+        <div class="result-block" id="test-result" hidden></div>
+      </section>
+
+      <footer class="footer" id="settings-footer">
+        <span class="dot ok"></span> Saved automatically
+      </footer>
+    </section>
+
+    <!-- First-run screen -->
+    <section id="screen-firstrun" class="screen" hidden>
+      <header class="header">
+        <div class="logo amber">🌐</div>
+        <div class="header-text">
+          <div class="title">Gemini Unblock</div>
+          <div class="status amber">⚠ Setup needed</div>
+        </div>
+      </header>
+      <section class="block centered">
+        <div class="big-icon">⚙</div>
+        <div class="cta-title">Connect a proxy to get started</div>
+        <div class="cta-sub">Enter the host, port and auth of your<br />HTTP/SOCKS proxy.</div>
+        <button class="cta" id="firstrun-open-settings">Open settings →</button>
+      </section>
+    </section>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>
