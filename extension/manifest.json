@@ -1,0 +1,35 @@
+{
+  "manifest_version": 3,
+  "name": "Gemini Unblock",
+  "version": "0.1.0",
+  "description": "Per-domain proxy router for Chromium. Routes a configurable list of domains through your own HTTP/SOCKS proxy.",
+  "minimum_chrome_version": "120",
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_title": "Gemini Unblock",
+    "default_icon": {
+      "16": "icons/off-16.png",
+      "32": "icons/off-32.png",
+      "48": "icons/off-48.png",
+      "128": "icons/off-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/off-16.png",
+    "32": "icons/off-32.png",
+    "48": "icons/off-48.png",
+    "128": "icons/off-128.png"
+  },
+  "permissions": [
+    "proxy",
+    "storage",
+    "webRequest",
+    "webRequestAuthProvider",
+    "tabs"
+  ],
+  "host_permissions": []
+}
