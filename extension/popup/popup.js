@@ -188,6 +188,9 @@ function bindSettings() {
       await persist();
     });
   }
+
+  $('#test-proxy').addEventListener('click', () => runTest('TEST_PROXY'));
+  $('#test-gemini').addEventListener('click', () => runTest('TEST_GEMINI'));
 }
 
 function renderSettings() {
@@ -210,8 +213,42 @@ function ensureProxyObject() {
   }
 }
 
+async function runTest(type) {
+  const btnProxy = $('#test-proxy');
+  const btnGemini = $('#test-gemini');
+  const result = $('#test-result');
+  btnProxy.disabled = true;
+  btnGemini.disabled = true;
+  result.hidden = true;
+
+  try {
+    const res = await chrome.runtime.sendMessage({ type });
+    result.hidden = false;
+    if (res.ok) {
+      result.className = 'result-block ok';
+      if (type === 'TEST_PROXY') {
+        result.innerHTML = `\u2713 Proxy reachable<br>IP: ${res.ip || '?'}<br>Country: ${res.country || '?'}<br>Latency: ${res.latencyMs} ms`;
+      } else {
+        result.innerHTML = `\u2713 Gemini reachable<br>HTTP ${res.httpStatus}<br>Latency: ${res.latencyMs} ms`;
+      }
+      state = await loadState();
+    } else {
+      result.className = 'result-block err';
+      result.textContent = `\u2717 ${res.error}`;
+    }
+  } finally {
+    btnProxy.disabled = false;
+    btnGemini.disabled = false;
+  }
+}
+
 // --- First-run screen ---
 
-function bindFirstRun() {}
+function bindFirstRun() {
+  $('#firstrun-open-settings').addEventListener('click', () => {
+    ensureProxyObject();
+    showSettings();
+  });
+}
 
 init();

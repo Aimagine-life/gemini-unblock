@@ -98,3 +98,48 @@ function isHostRouted(host, state) {
   }
   return false;
 }
+
+// --- popup messaging ------------------------------------------------------
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg?.type === 'TEST_PROXY') {
+    runProxyTest('https://ipinfo.io/json').then(sendResponse);
+    return true; // async response
+  }
+  if (msg?.type === 'TEST_GEMINI') {
+    runProxyTest('https://gemini.google.com/').then(sendResponse);
+    return true;
+  }
+});
+
+async function runProxyTest(url) {
+  const start = Date.now();
+  try {
+    const res = await fetch(url, {
+      cache: 'no-store',
+      signal: AbortSignal.timeout(8000),
+    });
+    const latencyMs = Date.now() - start;
+    let extra = {};
+    if (url.includes('ipinfo.io')) {
+      const data = await res.json();
+      extra = { ip: data.ip, country: data.country };
+      const state = await loadState();
+      if (state.proxy) {
+        state.proxy.lastTest = {
+          ok: true,
+          ip: data.ip,
+          country: data.country,
+          latencyMs,
+          at: Math.floor(Date.now() / 1000),
+        };
+        await saveState(state);
+      }
+    } else {
+      extra = { httpStatus: res.status };
+    }
+    return { ok: true, latencyMs, ...extra };
+  } catch (err) {
+    return { ok: false, error: String(err?.message || err) };
+  }
+}
