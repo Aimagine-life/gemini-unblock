@@ -29,7 +29,8 @@
     "storage",
     "webRequest",
     "webRequestAuthProvider",
-    "tabs"
+    "tabs",
+    "alarms"
   ],
   "host_permissions": ["<all_urls>"]
 }

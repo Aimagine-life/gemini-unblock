@@ -56,20 +56,42 @@ function renderMain() {
 
   $('#master-toggle').checked = !!state.enabled;
 
+  // RKN compliance banner
+  const rknResults = state.rknResults || {};
+  const blockedNames = [];
+  for (const key of PRESET_ORDER) {
+    const def = PRESET_DEFINITIONS[key];
+    const isBlocked = (def.domains || []).some((d) => rknResults[d]?.blocked);
+    if (isBlocked) blockedNames.push(def.label);
+  }
+  const banner = $('#rkn-banner');
+  if (blockedNames.length) {
+    $('#rkn-text').textContent =
+      `${blockedNames.join(', ')} — blocked by Roskomnadzor. Routing disabled to comply with Russian law.`;
+    banner.hidden = false;
+  } else {
+    banner.hidden = true;
+  }
+
   // Preset grid
   const grid = $('#preset-grid');
   grid.innerHTML = '';
   for (const key of PRESET_ORDER) {
     const def = PRESET_DEFINITIONS[key];
     const stored = state.presets[key];
+    const isBlocked = (def.domains || []).some((d) => rknResults[d]?.blocked);
     const card = document.createElement('div');
-    card.className = 'preset-card' + (stored?.enabled ? ' on' : '');
+    card.className = 'preset-card'
+      + (stored?.enabled ? ' on' : '')
+      + (isBlocked ? ' rkn-blocked' : '');
     card.dataset.key = key;
     card.innerHTML = `
       <div class="icon">${def.icon}</div>
       <div class="label">${def.label}</div>
     `;
-    card.addEventListener('click', () => togglePreset(key));
+    if (!isBlocked) {
+      card.addEventListener('click', () => togglePreset(key));
+    }
     grid.appendChild(card);
   }
 

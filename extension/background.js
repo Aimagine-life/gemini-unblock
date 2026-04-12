@@ -6,6 +6,7 @@ import { loadState, saveState } from './lib/storage.js';
 import { applyProxy, registerAuthListener } from './lib/proxy.js';
 import { setIconState } from './lib/icon.js';
 import { buildPacScript } from './lib/pac.js';
+import { checkAllPresets, isCheckDue } from './lib/rkn-check.js';
 
 // 1. Auth listener — must be top-level for sleep/wake survival.
 registerAuthListener();
@@ -31,12 +32,45 @@ chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, _tab) => {
   await refreshTabIcon(tabId, state);
 });
 
-// 5. Boot/wake.
+// 5. Boot/wake + RKN compliance check.
 (async function boot() {
   const state = await loadState();
   await applyProxy(state);
   await refreshActiveTabIcon(state);
+  await maybeRunRknCheck(state);
 })();
+
+// 6. Periodic RKN check — runs on chrome.alarms every 24h.
+chrome.alarms.create('rkn-check', { periodInMinutes: 24 * 60 });
+chrome.alarms.onAlarm.addListener(async (alarm) => {
+  if (alarm.name !== 'rkn-check') return;
+  const state = await loadState();
+  await runRknCheck(state);
+});
+
+async function maybeRunRknCheck(state) {
+  if (!isCheckDue(state.rknLastCheckAt)) return;
+  await runRknCheck(state);
+}
+
+async function runRknCheck(state) {
+  const results = await checkAllPresets(state.presets || {});
+  state.rknResults = results;
+  state.rknLastCheckAt = Date.now();
+
+  // Disable presets whose domains are RKN-blocked.
+  let changed = false;
+  for (const [_key, preset] of Object.entries(state.presets || {})) {
+    const blocked = (preset.domains || []).some((d) => results[d]?.blocked);
+    if (blocked && preset.enabled) {
+      preset.enabled = false;
+      changed = true;
+    }
+  }
+
+  await saveState(state);
+  if (changed) await applyProxy(state);
+}
 
 // --- helpers --------------------------------------------------------------
 
@@ -108,6 +142,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg?.type === 'TEST_GEMINI') {
     runProxyTest('https://gemini.google.com/').then(sendResponse);
+    return true;
+  }
+  if (msg?.type === 'RKN_CHECK') {
+    (async () => {
+      const st = await loadState();
+      await runRknCheck(st);
+      sendResponse(st.rknResults || {});
+    })();
     return true;
   }
 });

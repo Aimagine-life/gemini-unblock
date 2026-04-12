@@ -42,6 +42,12 @@ export const PRESET_DEFINITIONS = {
     domains: ['perplexity.ai', 'www.perplexity.ai'],
     isAi: false,
   },
+  youtube: {
+    label: 'YouTube',
+    icon: '▶',
+    domains: ['youtube.com', 'www.youtube.com', 'youtu.be', 'googlevideo.com'],
+    isAi: false,
+  },
   // Hidden preset — auto-routes Google login domains when ANY isAi preset is enabled.
   // Not exposed in UI; managed by pac.js.
   googleAuth: {
@@ -60,6 +66,7 @@ export const PRESET_ORDER = [
   'chatgpt',
   'claude',
   'perplexity',
+  'youtube',
 ];
 
 export const AI_PRESET_KEYS = Object.entries(PRESET_DEFINITIONS)

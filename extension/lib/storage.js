@@ -15,6 +15,7 @@ export function getDefaultState() {
       chatgpt:    { enabled: false, domains: ['chatgpt.com', 'chat.openai.com'] },
       claude:     { enabled: false, domains: ['claude.ai'] },
       perplexity: { enabled: false, domains: ['perplexity.ai', 'www.perplexity.ai'] },
+      youtube:    { enabled: false, domains: ['youtube.com', 'www.youtube.com', 'youtu.be', 'googlevideo.com'] },
     },
     customDomains: [],
   };

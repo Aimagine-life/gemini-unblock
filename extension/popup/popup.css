@@ -332,6 +332,29 @@ html, body {
 }
 .footer .dot.ok { background: var(--green); }
 
+.rkn-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 16px;
+  background: rgba(239, 68, 68, 0.08);
+  border-bottom: 1px solid var(--red);
+  font-size: 11px;
+  color: var(--red);
+  line-height: 1.4;
+}
+.rkn-banner[hidden] { display: none; }
+.rkn-icon { font-size: 14px; flex-shrink: 0; margin-top: 1px; }
+
+.preset-card.rkn-blocked {
+  opacity: 0.4;
+  pointer-events: none;
+}
+.preset-card.rkn-blocked::after {
+  content: '⚖';
+  background: var(--red);
+}
+
 .big-icon { font-size: 36px; margin-bottom: 10px; opacity: 0.7; }
 .cta-title { font-size: 13px; font-weight: 600; margin-bottom: 6px; }
 .cta-sub {
