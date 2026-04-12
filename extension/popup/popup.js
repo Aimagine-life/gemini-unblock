@@ -1,5 +1,4 @@
 import { loadState, saveState } from '../lib/storage.js';
-import { parseEntry, ValidationError } from '../lib/domain.js';
 import { PRESET_DEFINITIONS, PRESET_ORDER } from '../lib/presets.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -74,25 +73,6 @@ function renderMain() {
     grid.appendChild(card);
   }
 
-  // Custom list
-  const list = $('#custom-list');
-  list.innerHTML = '';
-  for (const entry of state.customDomains) {
-    const item = document.createElement('div');
-    item.className = 'custom-item';
-    const display = entry.mode === 'wildcard'
-      ? `*.${entry.value}`
-      : entry.mode === 'exact'
-        ? `=${entry.value}`
-        : entry.value;
-    item.innerHTML = `
-      <div class="dot"></div>
-      <div class="value">${escapeHtml(display)}</div>
-      <button class="remove" type="button" title="Remove">\u00d7</button>
-    `;
-    item.querySelector('.remove').addEventListener('click', () => removeCustom(entry));
-    list.appendChild(item);
-  }
 }
 
 function bindMain() {
@@ -104,35 +84,6 @@ function bindMain() {
 
   $('#open-settings').addEventListener('click', () => showSettings());
 
-  $('#add-domain-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const input = $('#add-domain-input');
-    const errEl = $('#add-domain-error');
-    errEl.hidden = true;
-    try {
-      const entry = parseEntry(input.value);
-      // Dedupe
-      const exists = state.customDomains.find(
-        (x) => x.value === entry.value && x.mode === entry.mode
-      );
-      if (exists) {
-        errEl.textContent = 'Already in list';
-        errEl.hidden = false;
-        return;
-      }
-      state.customDomains.push(entry);
-      await persist();
-      input.value = '';
-      renderMain();
-    } catch (err) {
-      if (err instanceof ValidationError) {
-        errEl.textContent = err.message;
-        errEl.hidden = false;
-      } else {
-        throw err;
-      }
-    }
-  });
 }
 
 async function togglePreset(key) {
@@ -141,22 +92,8 @@ async function togglePreset(key) {
   renderMain();
 }
 
-async function removeCustom(entry) {
-  state.customDomains = state.customDomains.filter(
-    (x) => !(x.value === entry.value && x.mode === entry.mode)
-  );
-  await persist();
-  renderMain();
-}
-
 async function persist() {
   await saveState(state);
-}
-
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, (c) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-  }[c]));
 }
 
 // --- Settings screen ---
