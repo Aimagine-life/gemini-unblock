@@ -90,3 +90,28 @@ export function validateNormalized(domain) {
   }
   return true;
 }
+
+/**
+ * Parse a user-entered entry into { value, mode }. Recognizes leading *.  and =
+ * prefixes for wildcard and exact match modes; otherwise defaults to suffix mode.
+ * Normalizes and validates the resulting hostname. Throws ValidationError on bad input.
+ */
+export function parseEntry(input) {
+  let raw = String(input ?? '').trim();
+  if (!raw) throw new ValidationError('empty input');
+
+  let mode = 'suffix';
+  if (raw.startsWith('*.')) {
+    mode = 'wildcard';
+    raw = raw.slice(2);
+  } else if (raw.startsWith('=')) {
+    mode = 'exact';
+    raw = raw.slice(1);
+  }
+
+  const value = normalizeDomain(raw);
+  if (!validateNormalized(value)) {
+    throw new ValidationError(`invalid hostname: ${input}`);
+  }
+  return { value, mode };
+}

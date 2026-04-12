@@ -109,3 +109,31 @@ test('validateNormalized: rejects total length > 253', () => {
   const longDomain = ('a'.repeat(60) + '.').repeat(5) + 'com';
   assert.equal(validateNormalized(longDomain), false);
 });
+
+import { parseEntry } from '../extension/lib/domain.js';
+
+test('parseEntry: plain domain → suffix mode', () => {
+  assert.deepEqual(parseEntry('example.com'), { value: 'example.com', mode: 'suffix' });
+});
+
+test('parseEntry: leading *. → wildcard mode', () => {
+  assert.deepEqual(parseEntry('*.example.com'), { value: 'example.com', mode: 'wildcard' });
+});
+
+test('parseEntry: leading = → exact mode', () => {
+  assert.deepEqual(parseEntry('=example.com'), { value: 'example.com', mode: 'exact' });
+});
+
+test('parseEntry: normalizes URL form', () => {
+  assert.deepEqual(parseEntry('https://Example.COM/foo'), { value: 'example.com', mode: 'suffix' });
+});
+
+test('parseEntry: normalizes wildcard URL form', () => {
+  assert.deepEqual(parseEntry('*.https://Example.COM'), { value: 'example.com', mode: 'wildcard' });
+});
+
+test('parseEntry: throws on garbage', () => {
+  assert.throws(() => parseEntry(''), ValidationError);
+  assert.throws(() => parseEntry('not a domain'), ValidationError);
+  assert.throws(() => parseEntry('localhost'), ValidationError);
+});
