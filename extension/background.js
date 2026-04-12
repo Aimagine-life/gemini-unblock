@@ -221,37 +221,43 @@ async function detectScheme(host, port, user, pass) {
   const candidates = ['http', 'socks5', 'socks4', 'https'];
   const state = await loadState();
 
-  // Temporarily save credentials so onAuthRequired can supply them.
+  // Save credentials so onAuthRequired can supply them during probing.
   const origProxy = state.proxy;
-  state.proxy = { host, port, scheme: 'http', user: user || '', pass: pass || '' };
+  state.proxy = { host, port: Number(port), scheme: 'http', user: user || '', pass: pass || '' };
   await saveState(state);
 
+  // Brief pause to ensure storage is committed before auth listener reads it.
+  await new Promise((r) => setTimeout(r, 100));
+
   for (const scheme of candidates) {
-    const pac = buildAllThroughPac({ scheme, host, port });
+    const pac = buildAllThroughPac({ scheme, host, port: Number(port) });
     try {
       await chrome.proxy.settings.set({
         value: { mode: 'pac_script', pacScript: { data: pac, mandatory: true } },
         scope: 'regular',
       });
+      // Small settle time for Chrome to apply the new PAC.
+      await new Promise((r) => setTimeout(r, 50));
       const res = await fetch('https://ipinfo.io/json', {
         cache: 'no-store',
-        signal: AbortSignal.timeout(5000),
+        signal: AbortSignal.timeout(8000),
       });
       if (res.ok) {
-        // Restore proxy and apply.
         state.proxy.scheme = scheme;
         await saveState(state);
         await applyProxy(state);
         return { ok: true, scheme };
       }
     } catch {
-      // This scheme didn't work, try next.
+      // Clear between attempts so Chrome doesn't cache the failed proxy.
+      await chrome.proxy.settings.clear({ scope: 'regular' });
+      await new Promise((r) => setTimeout(r, 100));
     }
   }
 
   // None worked — restore original state.
   state.proxy = origProxy;
   await saveState(state);
-  await applyProxy(state);
-  return { ok: false, error: 'Could not detect protocol' };
+  if (origProxy) await applyProxy(state);
+  return { ok: false, error: 'Could not detect protocol — check host:port' };
 }
