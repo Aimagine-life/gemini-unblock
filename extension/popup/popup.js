@@ -228,29 +228,47 @@ function renderSettings() {
 }
 
 /**
- * Try to parse a proxy URL like socks5://user:pass@host:port.
- * Returns { scheme, host, port, user, pass } or null if it's just a plain hostname.
+ * Try to parse a proxy string. Supported formats:
+ *   - socks5://user:pass@host:port  (URL style)
+ *   - http://host:port
+ *   - host:port:user:pass            (provider style, e.g. 196.16.109.114:8000:N0eT6k:UK2c2X)
+ *   - host:port
+ * Returns { scheme?, host, port?, user?, pass? } or null if it's just a plain hostname.
  */
 function tryParseProxyUrl(input) {
   const SCHEMES = { http: 'http', https: 'https', socks5: 'socks5', socks4: 'socks4', socks: 'socks5' };
 
-  // Quick check: does it look like a URL (has :// or scheme: prefix)?
+  // --- Provider format: host:port:user:pass ---
+  // Detect by splitting on colons: 4 parts where part[1] is a number.
   const hasScheme = /^[a-z][a-z0-9]*:\/\//i.test(input);
-  const hasPort = /:(\d+)\s*$/.test(input);
+  if (!hasScheme) {
+    const parts = input.trim().split(':');
+    if (parts.length === 4 && /^\d+$/.test(parts[1])) {
+      return {
+        host: parts[0],
+        port: parseInt(parts[1], 10),
+        user: parts[2],
+        pass: parts[3],
+      };
+    }
+    // host:port only
+    if (parts.length === 2 && /^\d+$/.test(parts[1])) {
+      return { host: parts[0], port: parseInt(parts[1], 10) };
+    }
+  }
 
-  if (!hasScheme && !hasPort) return null;
+  // --- URL format: scheme://user:pass@host:port ---
+  if (!hasScheme) return null;
 
   let scheme = null;
   let rest = input;
 
-  // Extract scheme
   const schemeMatch = input.match(/^([a-z][a-z0-9]*):\/\//i);
   if (schemeMatch) {
     scheme = SCHEMES[schemeMatch[1].toLowerCase()] || null;
     rest = input.slice(schemeMatch[0].length);
   }
 
-  // Extract userinfo
   let user = null;
   let pass = undefined;
   const atIdx = rest.indexOf('@');
@@ -266,7 +284,6 @@ function tryParseProxyUrl(input) {
     }
   }
 
-  // Extract host:port (strip trailing path/query)
   rest = rest.split(/[/?#]/)[0];
   let host = rest;
   let port = null;
