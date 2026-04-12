@@ -48,6 +48,12 @@ export const PRESET_DEFINITIONS = {
     domains: ['perplexity.ai', 'www.perplexity.ai'],
     isAi: false,
   },
+  elevenlabs: {
+    label: 'ElevenLabs',
+    icon: '🔊',
+    domains: ['elevenlabs.io', 'www.elevenlabs.io', 'api.elevenlabs.io'],
+    isAi: false,
+  },
   youtube: {
     label: 'YouTube',
     icon: '▶',
@@ -73,6 +79,7 @@ export const PRESET_ORDER = [
   'chatgpt',
   'claude',
   'perplexity',
+  'elevenlabs',
   'youtube',
 ];
 
