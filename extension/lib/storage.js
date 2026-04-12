@@ -23,7 +23,17 @@ export function getDefaultState() {
 
 export async function loadState() {
   const result = await chrome.storage.local.get(STORAGE_KEY);
-  return result[STORAGE_KEY] ?? getDefaultState();
+  const saved = result[STORAGE_KEY];
+  if (!saved) return getDefaultState();
+
+  // Merge: add any new presets that didn't exist when the user first installed.
+  const defaults = getDefaultState();
+  for (const [key, def] of Object.entries(defaults.presets)) {
+    if (!saved.presets[key]) {
+      saved.presets[key] = def;
+    }
+  }
+  return saved;
 }
 
 export async function saveState(state) {
