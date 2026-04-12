@@ -102,10 +102,12 @@ gemini-unblock/
   "private": true,
   "type": "module",
   "scripts": {
-    "test": "node --test tests/"
+    "test": "node --test"
   }
 }
 ```
+
+(Note: `node --test` with no path uses default discovery — picks up `tests/**/*.test.js` and `*.test.js` anywhere in the project. On Node 24, passing an explicit empty directory triggers a `MODULE_NOT_FOUND` error, so we let the runner discover tests itself.)
 
 - [ ] **Step 2: Create the directories with placeholder `.gitkeep` files**
 
