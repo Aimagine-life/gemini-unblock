@@ -176,7 +176,44 @@ function bindMain() {
     await persist();
     input.value = '';
     renderMain();
+
+    // Success toast + confetti
+    showToast(`\u2713 ${entry.value} added \u2014 not blocked by RKN`);
+    launchConfetti();
   });
+}
+
+function showToast(msg) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  const t = document.createElement('div');
+  t.className = 'toast';
+  t.textContent = msg;
+  document.body.appendChild(t);
+  setTimeout(() => t.classList.add('show'), 10);
+  setTimeout(() => {
+    t.classList.remove('show');
+    setTimeout(() => t.remove(), 300);
+  }, 2400);
+}
+
+function launchConfetti() {
+  const container = document.createElement('div');
+  container.className = 'confetti';
+  document.body.appendChild(container);
+
+  const colors = ['#10b981', '#06b6d4', '#6366f1', '#f59e0b', '#ec4899'];
+  for (let i = 0; i < 40; i++) {
+    const p = document.createElement('div');
+    p.className = 'confetti-piece';
+    p.style.left = Math.random() * 100 + '%';
+    p.style.background = colors[Math.floor(Math.random() * colors.length)];
+    p.style.animationDelay = (Math.random() * 0.3) + 's';
+    p.style.animationDuration = (1 + Math.random() * 0.8) + 's';
+    p.style.transform = `rotate(${Math.random() * 360}deg)`;
+    container.appendChild(p);
+  }
+  setTimeout(() => container.remove(), 2200);
 }
 
 function escapeHtml(s) {
