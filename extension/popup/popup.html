@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=360, initial-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Gemini Unblock</title>
   <link rel="stylesheet" href="popup.css" />
 </head>
@@ -20,7 +20,7 @@
           <input type="checkbox" id="master-toggle" />
           <span class="slider"></span>
         </label>
-        <button class="gear" id="open-settings" title="Settings">⚙</button>
+        <button type="button" class="gear" id="open-settings" title="Settings">⚙</button>
       </header>
 
       <div class="rkn-banner" id="rkn-banner" hidden>
@@ -48,7 +48,7 @@
     <!-- Settings screen -->
     <section id="screen-settings" class="screen" hidden>
       <header class="header">
-        <button class="back" id="back-to-main" title="Back">←</button>
+        <button type="button" class="back" id="back-to-main" title="Back">←</button>
         <div class="header-text">
           <div class="title">Proxy settings</div>
         </div>
@@ -57,11 +57,11 @@
       <section class="block">
         <div class="block-label">Protocol</div>
         <div class="pill-group" id="scheme-pills">
-          <button data-scheme="auto" class="pill pill-auto">&#x2725; Auto</button>
-          <button data-scheme="http"   class="pill">HTTP</button>
-          <button data-scheme="https"  class="pill">HTTPS</button>
-          <button data-scheme="socks5" class="pill">SOCKS5</button>
-          <button data-scheme="socks4" class="pill">SOCKS4</button>
+          <button type="button" data-scheme="auto" class="pill pill-auto">&#x2725; Auto</button>
+          <button type="button" data-scheme="http"   class="pill">HTTP</button>
+          <button type="button" data-scheme="https"  class="pill">HTTPS</button>
+          <button type="button" data-scheme="socks5" class="pill">SOCKS5</button>
+          <button type="button" data-scheme="socks4" class="pill">SOCKS4</button>
         </div>
       </section>
 
@@ -89,8 +89,8 @@
 
       <section class="block">
         <div class="row">
-          <button class="action" id="test-proxy">Test proxy</button>
-          <button class="action" id="test-gemini">Test Gemini</button>
+          <button type="button" class="action" id="test-proxy">Test proxy</button>
+          <button type="button" class="action" id="test-gemini">Test Gemini</button>
         </div>
         <div class="result-block" id="test-result" hidden></div>
       </section>
@@ -113,7 +113,7 @@
         <div class="big-icon">⚙</div>
         <div class="cta-title">Connect a proxy to get started</div>
         <div class="cta-sub">Enter the host, port and auth of your<br />HTTP/SOCKS proxy.</div>
-        <button class="cta" id="firstrun-open-settings">Open settings →</button>
+        <button type="button" class="cta" id="firstrun-open-settings">Open settings →</button>
       </section>
     </section>
   </div>
