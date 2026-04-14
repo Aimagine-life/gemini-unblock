@@ -17,14 +17,16 @@ jobs:
       - name: Clone zapret-info/z-i (shallow)
         run: git clone --depth 1 https://github.com/zapret-info/z-i.git /tmp/z-i
 
-      - name: Extract unique domains
+      - name: Extract domain-level blocks only
         run: |
           mkdir -p data
-          # z-i is CP1251 encoded; field 2 (;-separated) is the domain.
-          # Keep only valid DNS-style hostnames, strip wildcards' prefix.
+          # z-i format: IP;DOMAIN;URL;ORG;DATE;DECISION (CP1251 encoded, ;-separated).
+          # We include a domain only if URL field ($3) is empty — that's a
+          # whole-domain block. URL-specific blocks (e.g. a single YouTube video)
+          # are excluded, otherwise the parent domain would look blocked.
           cat /tmp/z-i/dump-*.csv \
             | iconv -f CP1251 -t UTF-8 \
-            | awk -F';' 'NR>1 && $2 != "" { gsub(/^ +| +$/,"",$2); print tolower($2) }' \
+            | awk -F';' 'NR>1 && $2 != "" && $3 == "" { gsub(/^ +| +$/,"",$2); print tolower($2) }' \
             | sed 's/^\*\.//' \
             | grep -E '^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$' \
             | sort -u > data/rkn-domains.txt
