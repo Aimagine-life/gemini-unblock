@@ -6,7 +6,7 @@ import { loadState, saveState } from './lib/storage.js';
 import { applyProxy, registerAuthListener } from './lib/proxy.js';
 import { setIconState } from './lib/icon.js';
 import { buildPacScript } from './lib/pac.js';
-import { checkAllPresets, isCheckDue } from './lib/rkn-check.js';
+import { checkAllPresets, isCheckDue, checkDomain } from './lib/rkn-check.js';
 
 // 1. Auth listener — must be top-level for sleep/wake survival.
 registerAuthListener();
@@ -152,11 +152,9 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     return false;
   }
   if (msg?.type === 'CHECK_DOMAIN') {
-    (async () => {
-      const { checkDomain } = await import('./lib/rkn-check.js');
-      const result = await checkDomain(msg.domain);
-      sendResponse(result);
-    })();
+    checkDomain(msg.domain)
+      .then((result) => sendResponse(result))
+      .catch((err) => sendResponse({ blocked: false, reason: `error: ${err.message}` }));
     return true;
   }
   if (msg?.type === 'RKN_CHECK') {
