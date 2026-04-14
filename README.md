@@ -31,8 +31,11 @@ Chromium extension that routes AI services and other geo-restricted sites throug
 | ChatGPT | chatgpt.com, chat.openai.com |
 | Claude | claude.ai |
 | Perplexity | perplexity.ai |
+| Grok | grok.com, x.ai |
 | ElevenLabs | elevenlabs.io |
 | YouTube | youtube.com, youtu.be, googlevideo.com |
+
+Custom domains can also be added — they're checked against the RKN registry before being accepted. RKN-blocked domains are rejected.
 
 Google Auth (accounts.google.com) is auto-routed when any Google AI service is enabled.
 
@@ -83,8 +86,11 @@ Manifest V3, vanilla JS, no dependencies, no build step. Tests: `npm test`.
 | ChatGPT | chatgpt.com, chat.openai.com |
 | Claude | claude.ai |
 | Perplexity | perplexity.ai |
+| Grok | grok.com, x.ai |
 | ElevenLabs | elevenlabs.io |
 | YouTube | youtube.com, youtu.be, googlevideo.com |
+
+Также можно добавить свои домены — они проверяются в реестре РКН перед добавлением. Заблокированные Роскомнадзором домены не принимаются.
 
 Google Auth (accounts.google.com) подключается автоматически при включении любого Google AI сервиса.
 

@@ -151,6 +151,14 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
     sendResponse({ started: true });
     return false;
   }
+  if (msg?.type === 'CHECK_DOMAIN') {
+    (async () => {
+      const { checkDomain } = await import('./lib/rkn-check.js');
+      const result = await checkDomain(msg.domain);
+      sendResponse(result);
+    })();
+    return true;
+  }
   if (msg?.type === 'RKN_CHECK') {
     (async () => {
       const st = await loadState();

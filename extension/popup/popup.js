@@ -1,4 +1,5 @@
 import { loadState, saveState } from '../lib/storage.js';
+import { parseEntry, ValidationError } from '../lib/domain.js';
 import { PRESET_DEFINITIONS, PRESET_ORDER } from '../lib/presets.js';
 
 const $ = (sel) => document.querySelector(sel);
@@ -95,6 +96,23 @@ function renderMain() {
     grid.appendChild(card);
   }
 
+  // Custom domains list
+  const list = $('#custom-list');
+  list.innerHTML = '';
+  for (const entry of state.customDomains || []) {
+    const item = document.createElement('div');
+    item.className = 'custom-item';
+    const display = entry.mode === 'wildcard'
+      ? `*.${entry.value}`
+      : entry.mode === 'exact' ? `=${entry.value}` : entry.value;
+    item.innerHTML = `
+      <div class="dot"></div>
+      <div class="value">${escapeHtml(display)}</div>
+      <button class="remove" type="button" title="Remove">\u00d7</button>
+    `;
+    item.querySelector('.remove').addEventListener('click', () => removeCustom(entry));
+    list.appendChild(item);
+  }
 }
 
 function bindMain() {
@@ -106,6 +124,73 @@ function bindMain() {
 
   $('#open-settings').addEventListener('click', () => showSettings());
 
+  $('#add-domain-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = $('#add-domain-input');
+    const errEl = $('#add-domain-error');
+    const btn = $('#add-domain-btn');
+    errEl.hidden = true;
+
+    let entry;
+    try {
+      entry = parseEntry(input.value);
+    } catch (err) {
+      if (err instanceof ValidationError) {
+        errEl.textContent = err.message;
+        errEl.hidden = false;
+        return;
+      }
+      throw err;
+    }
+
+    // Dedupe
+    const exists = (state.customDomains || []).find(
+      (x) => x.value === entry.value && x.mode === entry.mode
+    );
+    if (exists) {
+      errEl.textContent = 'Already in list';
+      errEl.hidden = false;
+      return;
+    }
+
+    // RKN compliance check
+    btn.disabled = true;
+    btn.textContent = 'Checking\u2026';
+    try {
+      const result = await chrome.runtime.sendMessage({
+        type: 'CHECK_DOMAIN',
+        domain: entry.value,
+      });
+      if (result?.blocked) {
+        errEl.textContent = `\u26d4 ${entry.value} is blocked by Roskomnadzor \u2014 cannot add (149-FZ)`;
+        errEl.hidden = false;
+        return;
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '+ Add';
+    }
+
+    state.customDomains = state.customDomains || [];
+    state.customDomains.push(entry);
+    await persist();
+    input.value = '';
+    renderMain();
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, (c) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+  }[c]));
+}
+
+async function removeCustom(entry) {
+  state.customDomains = (state.customDomains || []).filter(
+    (x) => !(x.value === entry.value && x.mode === entry.mode)
+  );
+  await persist();
+  renderMain();
 }
 
 async function togglePreset(key) {
