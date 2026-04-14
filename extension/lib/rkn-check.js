@@ -1,71 +1,82 @@
-// RKN compliance check. Detects whether a domain is blocked by Roskomnadzor
-// (government block) vs. simply geo-restricted by the service itself.
+// RKN compliance check. Uses a hosted mirror of the official RKN registry
+// (updated daily from zapret-info/z-i via our GitHub Action).
 //
-// Legal context: geo-restriction by a service (Google blocking Gemini in RU) is
-// not a government ban — using a proxy is legal. An RKN block IS a government ban —
-// circumventing it may violate Russian law (149-FZ).
+// Legal: geo-restriction by a service (Google blocking Gemini in RU) is not
+// a government ban — using a proxy is legal. An RKN block IS a government ban —
+// circumventing it may violate 149-FZ.
 
-import { loadState, saveState } from './storage.js';
-import { applyProxy } from './proxy.js';
-
-const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24 hours
-const FETCH_TIMEOUT_MS = 5000;
-
-// Known ISP block page patterns.
-const BLOCK_PAGE_PATTERNS = [
-  /rkn\.gov/i, /eais\.rkn/i, /blocklist/i, /zapret/i, /blocked/i,
-  /warning\.rt\.ru/i, /block\.mts\.ru/i, /block\.beeline\.ru/i,
-  /restrictor/i, /nap\.rkn/i,
-];
+const LIST_URL = 'https://raw.githubusercontent.com/Aimagine-life/gemini-unblock/main/data/rkn-domains.txt';
+const CACHE_KEY = 'rknListCache';
+const CHECK_INTERVAL_MS = 24 * 60 * 60 * 1000; // 24h refresh
+const FETCH_TIMEOUT_MS = 20000;
 
 /**
- * Check a single domain DIRECTLY (no proxy). Returns { blocked, reason }.
- * Temporarily clears proxy, fetches, restores proxy from saved state.
+ * Fetch the RKN domain list from GitHub, cache in chrome.storage.
+ * Returns a Set of blocked domain strings (lowercased).
  */
-export async function checkDomain(domain) {
-  await chrome.proxy.settings.clear({ scope: 'regular' });
+async function loadRknList() {
+  const cached = (await chrome.storage.local.get(CACHE_KEY))[CACHE_KEY];
+  const fresh = cached && (Date.now() - cached.at) < CHECK_INTERVAL_MS;
+  if (fresh && Array.isArray(cached.domains)) {
+    return new Set(cached.domains);
+  }
 
   try {
-    const res = await fetch(`https://${domain}/`, {
-      method: 'HEAD',
+    const res = await fetch(LIST_URL, {
       cache: 'no-store',
-      redirect: 'manual',
       signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
     });
-
-    if (res.type === 'opaqueredirect' || (res.status >= 300 && res.status < 400)) {
-      const location = res.headers.get('location') || '';
-      const redirectDomain = extractDomain(location);
-      if (redirectDomain && redirectDomain !== domain && isBlockPage(location)) {
-        return { blocked: true, reason: `redirect to ${redirectDomain}` };
-      }
-    }
-    return { blocked: false, reason: `HTTP ${res.status}` };
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const text = await res.text();
+    const domains = text.split('\n').map((s) => s.trim()).filter(Boolean);
+    await chrome.storage.local.set({
+      [CACHE_KEY]: { domains, at: Date.now() },
+    });
+    return new Set(domains);
   } catch (err) {
-    // Timeout / reset / refused. Could be RKN DPI but also plain network issue.
-    // Err on side of allowing: treat as not-blocked.
-    return { blocked: false, reason: `${err.message} (assumed not blocked)` };
-  } finally {
-    // Restore proxy from state so the extension keeps working.
-    const state = await loadState();
-    await applyProxy(state);
+    // On fetch failure, use whatever cache we have (even if stale).
+    if (cached?.domains) return new Set(cached.domains);
+    throw err;
   }
 }
 
-function extractDomain(url) {
-  try { return new URL(url).hostname; } catch { return null; }
+function isHostInSet(host, set) {
+  const h = host.toLowerCase().replace(/^\*\./, '');
+  if (set.has(h)) return true;
+  // Match any parent domain (e.g., sub.example.com matches example.com).
+  const parts = h.split('.');
+  for (let i = 1; i < parts.length - 1; i++) {
+    if (set.has(parts.slice(i).join('.'))) return true;
+  }
+  return false;
 }
 
-function isBlockPage(url) {
-  return BLOCK_PAGE_PATTERNS.some((re) => re.test(url));
+/**
+ * Check a single domain against the RKN registry.
+ * Returns { blocked: boolean, reason: string }.
+ */
+export async function checkDomain(domain) {
+  try {
+    const set = await loadRknList();
+    if (isHostInSet(domain, set)) {
+      return { blocked: true, reason: 'in RKN registry' };
+    }
+    return { blocked: false, reason: 'not in RKN registry' };
+  } catch (err) {
+    // Can't reach the list — fail open (don't block user) but note it.
+    return { blocked: false, reason: `list unavailable: ${err.message}` };
+  }
 }
 
 export async function checkAllPresets(presets) {
+  const set = await loadRknList().catch(() => null);
   const results = {};
   for (const [_key, preset] of Object.entries(presets)) {
     for (const domain of preset.domains || []) {
       if (results[domain]) continue;
-      results[domain] = await checkDomain(domain);
+      results[domain] = set && isHostInSet(domain, set)
+        ? { blocked: true, reason: 'in RKN registry' }
+        : { blocked: false, reason: set ? 'not in registry' : 'list unavailable' };
     }
   }
   return results;

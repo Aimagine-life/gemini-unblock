@@ -1,0 +1,45 @@
+name: Update RKN domain list
+
+on:
+  schedule:
+    - cron: '0 3 * * *'    # daily at 03:00 UTC
+  workflow_dispatch:        # manual run
+
+permissions:
+  contents: write
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Clone zapret-info/z-i (shallow)
+        run: git clone --depth 1 https://github.com/zapret-info/z-i.git /tmp/z-i
+
+      - name: Extract unique domains
+        run: |
+          mkdir -p data
+          # z-i is CP1251 encoded; field 2 (;-separated) is the domain.
+          # Keep only valid DNS-style hostnames, strip wildcards' prefix.
+          cat /tmp/z-i/dump-*.csv \
+            | iconv -f CP1251 -t UTF-8 \
+            | awk -F';' 'NR>1 && $2 != "" { gsub(/^ +| +$/,"",$2); print tolower($2) }' \
+            | sed 's/^\*\.//' \
+            | grep -E '^[a-z0-9][a-z0-9.-]*\.[a-z]{2,}$' \
+            | sort -u > data/rkn-domains.txt
+
+          wc -l < data/rkn-domains.txt > data/rkn-meta.txt
+          date -u +"%Y-%m-%dT%H:%M:%SZ" >> data/rkn-meta.txt
+
+      - name: Commit if changed
+        run: |
+          git config user.name "rkn-list-bot"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/rkn-domains.txt data/rkn-meta.txt
+          if git diff --staged --quiet; then
+            echo "No changes."
+          else
+            git commit -m "chore(rkn): update domain list from z-i"
+            git push
+          fi
