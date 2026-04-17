@@ -18,7 +18,17 @@ export function getDefaultState() {
       perplexity: { enabled: false, domains: ['perplexity.ai', 'www.perplexity.ai'] },
       grok:       { enabled: false, domains: ['grok.com', 'www.grok.com', 'x.ai'] },
       elevenlabs: { enabled: false, domains: ['elevenlabs.io', 'www.elevenlabs.io', 'api.elevenlabs.io'] },
-      youtube:    { enabled: false, domains: ['youtube.com', 'www.youtube.com', 'youtu.be', 'googlevideo.com'] },
+      youtube:    {
+        enabled: false,
+        domains: [
+          'youtube.com',
+          'www.youtube.com',
+          'youtu.be',
+          'googlevideo.com',
+          'ytimg.com',
+          'ggpht.com',
+        ],
+      },
     },
     customDomains: [],
   };
@@ -31,10 +41,22 @@ export async function loadState() {
 
   // Merge: add any new presets that didn't exist when the user first installed.
   const defaults = getDefaultState();
+  saved.presets = saved.presets || {};
   for (const [key, def] of Object.entries(defaults.presets)) {
     if (!saved.presets[key]) {
       saved.presets[key] = def;
+      continue;
     }
+
+    // Merge domain additions for existing presets so upgrades pull in
+    // newly required service domains (e.g. YouTube thumbnails CDN hosts).
+    const existing = saved.presets[key];
+    const existingDomains = Array.isArray(existing.domains) ? existing.domains : [];
+    const mergedDomains = [...existingDomains];
+    for (const domain of def.domains || []) {
+      if (!mergedDomains.includes(domain)) mergedDomains.push(domain);
+    }
+    saved.presets[key] = { ...existing, domains: mergedDomains };
   }
   return saved;
 }

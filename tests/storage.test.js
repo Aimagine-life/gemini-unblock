@@ -34,6 +34,12 @@ test('getDefaultState: gemini and aiStudio presets enabled by default', () => {
   assert.equal(s.presets.chatgpt.enabled, false);
 });
 
+test('getDefaultState: youtube preset includes preview/image domains', () => {
+  const domains = getDefaultState().presets.youtube.domains;
+  assert.equal(domains.includes('ytimg.com'), true);
+  assert.equal(domains.includes('ggpht.com'), true);
+});
+
 test('loadState: returns default state when storage empty', async () => {
   await chrome.storage.local.clear();
   const s = await loadState();
@@ -49,4 +55,15 @@ test('loadState/saveState: round-trip preserves data', async () => {
   await saveState(original);
   const loaded = await loadState();
   assert.deepEqual(loaded, original);
+});
+
+test('loadState: merges newly added domains into existing preset', async () => {
+  await chrome.storage.local.clear();
+  const oldState = getDefaultState();
+  oldState.presets.youtube.domains = ['youtube.com', 'www.youtube.com', 'youtu.be', 'googlevideo.com'];
+  await saveState(oldState);
+
+  const loaded = await loadState();
+  assert.equal(loaded.presets.youtube.domains.includes('ytimg.com'), true);
+  assert.equal(loaded.presets.youtube.domains.includes('ggpht.com'), true);
 });
