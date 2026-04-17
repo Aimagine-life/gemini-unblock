@@ -33,7 +33,7 @@ Chromium extension that routes AI services and other geo-restricted sites throug
 | Perplexity | perplexity.ai |
 | Grok | grok.com, x.ai |
 | ElevenLabs | elevenlabs.io |
-| YouTube | youtube.com, youtu.be, googlevideo.com |
+| YouTube | youtube.com, youtu.be, googlevideo.com, ytimg.com, ggpht.com |
 
 Custom domains can also be added — they're checked against the RKN registry before being accepted. RKN-blocked domains are rejected.
 
@@ -56,6 +56,10 @@ Manifest V3, vanilla JS, no dependencies, no build step. Tests: `npm test`.
 # Gemini Unblock (RU)
 
 Расширение для Chromium, которое направляет AI-сервисы и другие гео-ограниченные сайты через ваш прокси.
+
+## Превью 0.4.2
+
+В этой версии исправлена работа YouTube через прокси: добавлены домены `ytimg.com` и `ggpht.com`, из-за чего корректно подгружаются превью видео и изображения каналов. Также устранено шумное сообщение `No tab with id` в консоли Chrome при быстрых переключениях/закрытиях вкладок.
 
 ## Установка
 
@@ -88,7 +92,7 @@ Manifest V3, vanilla JS, no dependencies, no build step. Tests: `npm test`.
 | Perplexity | perplexity.ai |
 | Grok | grok.com, x.ai |
 | ElevenLabs | elevenlabs.io |
-| YouTube | youtube.com, youtu.be, googlevideo.com |
+| YouTube | youtube.com, youtu.be, googlevideo.com, ytimg.com, ggpht.com |
 
 Также можно добавить свои домены — они проверяются в реестре РКН перед добавлением. Заблокированные Роскомнадзором домены не принимаются.
 

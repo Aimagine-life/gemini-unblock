@@ -63,7 +63,14 @@ export const PRESET_DEFINITIONS = {
   youtube: {
     label: 'YouTube',
     icon: '▶',
-    domains: ['youtube.com', 'www.youtube.com', 'youtu.be', 'googlevideo.com'],
+    domains: [
+      'youtube.com',
+      'www.youtube.com',
+      'youtu.be',
+      'googlevideo.com',
+      'ytimg.com',
+      'ggpht.com',
+    ],
     isAi: false,
   },
   // Hidden preset — auto-routes Google login domains when ANY isAi preset is enabled.
