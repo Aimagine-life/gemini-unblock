@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Gemini Unblock",
-  "version": "0.4.1",
+  "version": "0.4.2",
   "description": "Per-domain proxy router for Chromium. Routes a configurable list of domains through your own HTTP/SOCKS proxy.",
   "homepage_url": "https://github.com/Aimagine-life/gemini-unblock",
   "minimum_chrome_version": "120",
